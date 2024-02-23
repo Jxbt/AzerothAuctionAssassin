@@ -10,10 +10,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     outputs:
-      upload_url: 
-        description: 'The URL for uploading assets to the release'
-        value: ${{ steps.create_release.outputs.upload_url }}
-        safe: true
+      upload_url_base64: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
     - name: Checkout code
@@ -106,7 +103,10 @@ jobs:
         release_name: Release v1.0.10.5
         draft: false
         prerelease: false
-
+        
+    - name: Encode and Save Upload URL
+      run: echo "::set-output name=upload_url_base64::$(echo -n ${{ steps.create_release.outputs.upload_url }} | base64 --wrap=0)"
+          
     - name: Upload Executable to Release
       uses: actions/upload-release-asset@v1
       env:
@@ -161,12 +161,15 @@ jobs:
     #     asset_name: AzerothAuctionAssassin-macOS
     #     asset_content_type: application/octet-stream
 
+    - name: Decode Upload URL
+      run: echo "${{ needs.build-windows.outputs.upload_url_base64 }}" | base64 --decode > upload_url.txt
+
     - name: Upload macOS Executable to Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ needs.build-windows.outputs.upload_url }}
+        upload_url: $(cat upload_url.txt)
         asset_path: ./dist/AzerothAuctionAssassin
         asset_name: AzerothAuctionAssassin-macOS
         asset_content_type: application/octet-stream
