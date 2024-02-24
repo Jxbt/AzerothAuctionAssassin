@@ -10,7 +10,7 @@ jobs:
   build-windows:
 
     outputs:
-      upload_url_base64: ${{ steps.create_release.outputs.upload_url_base64 }}
+      upload_url_base64: ${{ steps.b64encode_upload_url.outputs.upload_url_base64 }}
 
     runs-on: windows-latest
     steps:
@@ -36,6 +36,7 @@ jobs:
         prerelease: false
 
     - name: Encode and Save Upload URL as Base64
+      id: b64encode_upload_url
       run: echo "::set-output name=upload_url_base64::$(echo -n '${{ steps.create_release.outputs.upload_url }}' | base64 --wrap=0)"
 
     - name: Upload Executable to Release
