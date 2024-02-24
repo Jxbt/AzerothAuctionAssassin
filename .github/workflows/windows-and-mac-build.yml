@@ -10,7 +10,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     outputs:
-      upload_url_base64: ${{ steps.create_release.outputs.upload_url_base64 }}
+      upload_url_base64: ${{ steps.b64encode_upload_url.outputs.upload_url_base64 }}
 
     steps:
     - name: Checkout code
@@ -26,19 +26,14 @@ jobs:
         If (-Not (Test-Path $pythonEmbeddedDir)) {
             New-Item -ItemType Directory -Force -Path $pythonEmbeddedDir
         }
-
         # Download the embedded Python zip
         curl https://www.python.org/ftp/python/3.11.4/python-3.11.4-embed-win32.zip -o "python.zip"
-
         # Extract the Python zip
         Expand-Archive -Path "python.zip" -DestinationPath $pythonEmbeddedDir -Force
-
         # Download pip.pyz
         curl https://bootstrap.pypa.io/pip/pip.pyz -o "$pythonEmbeddedDir\pip.pyz"
-
         # Install packages from requirements.txt using the embedded Python and pip.pyz
         & "$pythonEmbeddedDir\python.exe" "$pythonEmbeddedDir\pip.pyz" install -r .\requirements.txt --target=".\Lib\site-packages\"
-
         Remove-Item -Recurse -Force .\python-embedded
         Remove-Item -Force python.zip
       shell: pwsh
@@ -55,21 +50,17 @@ jobs:
         $ZipFileResult = "..\app.zip"
         $DirsToExclude = @("AzerothAuctionAssassin-windows", ".git", ".github", "__pycache__")
         $FilesToExclude = @(".gitignore")
-
         # Get all directories that are not in the exclude list and compress them
         Get-ChildItem -Path $DirToCompress -Directory | Where-Object { $_.Name -notin $DirsToExclude } | Compress-Archive -DestinationPath $ZipFileResult -Update
-
         # Get all Files that are not in the exclude list and compress them
         Get-ChildItem -Path $DirToCompress -File | Where-Object { $_.Name -notin $FilesToExclude } | Compress-Archive -DestinationPath $ZipFileResult -Update
-
         
         Move-Item -Path ..\app.zip -Destination AzerothAuctionAssassin-windows\AzerothAuctionAssassin\Resources\app.zip -Force
-
       shell: pwsh
 
     - name: update version number
       run: |
-        echo 1.0.10.7 > AzerothAuctionAssassin-windows\AzerothAuctionAssassin\Resources\appVersion.txt
+        echo 1.0.11 > AzerothAuctionAssassin-windows\AzerothAuctionAssassin\Resources\appVersion.txt
 
     - name: Build EXE
       run: |
@@ -99,11 +90,14 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v1.0.10.7
-        release_name: Release v1.0.10.7
+        tag_name: v1.0.11
+        release_name: Release v1.0.11
         draft: false
         prerelease: false
-        
+
+    - name: Encode and Save Upload URL as Base64
+      id: b64encode_upload_url
+      run: echo "::set-output name=upload_url_base64::$(echo -n '${{ steps.create_release.outputs.upload_url }}' | base64 --wrap=0)"
 
     - name: Upload Executable to Release
       uses: actions/upload-release-asset@v1
@@ -114,9 +108,6 @@ jobs:
         asset_path: .\AzerothAuctionAssassin-windows\AzerothAuctionAssassin\bin\Release\net8.0-windows\publish\win-x86\AzerothAuctionAssassin.exe
         asset_name: AzerothAuctionAssassin.exe
         asset_content_type: application/octet-stream
-
-    - name: Encode and Save Upload URL as Base64
-      run: echo "::set-output name=upload_url_base64::$(echo -n '${{ steps.create_release.outputs.upload_url }}' | base64 --wrap=0)"
 
   build-mac:
     needs: build-windows
@@ -137,7 +128,8 @@ jobs:
     - name: Build macOS executable
       run: |
         python -m pip install pyinstaller
-        pyinstaller --onefile --add-data "AzerothAuctionAssassinData:./AzerothAuctionAssassinData" --add-data "utils:./utils" AzerothAuctionAssassin.py
+        pyinstaller --onefile --add-data "AzerothAuctionAssassinData:./AzerothAuctionAssassinData" --add-data "utils:./utils" --add-data "icon.png:." --icon=icon.ico AzerothAuctionAssassin.py
+        chmod +x ./dist/AzerothAuctionAssassin
 
     - name: Decode macOS Certificate
       run: |
@@ -162,15 +154,17 @@ jobs:
     #     asset_name: AzerothAuctionAssassin-macOS
     #     asset_content_type: application/octet-stream
 
+    # Step to decode Base64 upload URL
     - name: Decode Upload URL
-      run: echo "${{ needs.build-windows.outputs.upload_url_base64 }}" | base64 --decode > upload_url.txt
+      run: |
+        echo "decoded_upload_url=$(echo ${{ needs.build-windows.outputs.upload_url_base64 }} | base64 --decode)" >> $GITHUB_ENV
 
     - name: Upload macOS Executable to Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: $(cat upload_url.txt)
+        upload_url: ${{ env.decoded_upload_url }}
         asset_path: ./dist/AzerothAuctionAssassin
         asset_name: AzerothAuctionAssassin-macOS
         asset_content_type: application/octet-stream
