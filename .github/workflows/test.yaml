@@ -8,13 +8,15 @@ on:
 
 jobs:
   build-windows:
+
+    outputs:
+      upload_url_base64: ${{ steps.create_release.outputs.upload_url_base64 }}
     runs-on: windows-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    outputs:
-      upload_url_base64: ${{ steps.create_release.outputs.upload_url_base64 }}
+
 
     - name: update version number
       run: |
