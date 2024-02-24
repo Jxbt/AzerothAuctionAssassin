@@ -64,6 +64,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: $(cat upload_url.txt)
-        asset_path: AzerothAuctionAssassin-windows\AzerothAuctionAssassin\Resources\appVersion.txt
+        asset_path: upload_url.txt
         asset_name: AzerothAuctionAssassin-macOS
         asset_content_type: application/octet-stream
