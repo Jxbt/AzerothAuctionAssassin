@@ -21,7 +21,7 @@ jobs:
 
     - name: update version number
       run: |
-        echo 1.0.10.555 > AzerothAuctionAssassin-windows\AzerothAuctionAssassin\Resources\appVersion.txt
+        echo 1.0.10.777 > AzerothAuctionAssassin-windows\AzerothAuctionAssassin\Resources\appVersion.txt
     
 
     - name: Create Release
@@ -30,8 +30,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v1.0.10.555
-        release_name: Release v1.0.10.555
+        tag_name: v1.0.10.777
+        release_name: Release v1.0.10.777
         draft: false
         prerelease: false
 
@@ -58,14 +58,14 @@ jobs:
       uses: actions/checkout@v2
     
     - name: Decode Upload URL
-      run: echo "${{ needs.build-windows.outputs.upload_url_base64 }}" | base64 --decode > upload_url.txt
+      echo "decoded_upload_url=$(echo ${{ needs.build-windows.outputs.upload_url_base64 }} | base64 --decode)" >> $GITHUB_ENV
 
     - name: Upload macOS Executable to Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: $(cat upload_url.txt)
+        upload_url: ${{ env.decoded_upload_url }}
         asset_path: ./AzerothAuctionAssassin-windows/AzerothAuctionAssassin/Program.cs
         asset_name: AzerothAuctionAssassin-macOS
         asset_content_type: application/octet-stream
